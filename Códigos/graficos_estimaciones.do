@@ -1,5 +1,3 @@
-
-
 ***** CONSTRUCT DATA SET *****
 
 * Import data set with prices
@@ -372,13 +370,10 @@ wildbootstrap reg precio_cont post_imported post imported, cluster(categoria_pro
 eststo: test post_imported == 0
 estadd scalar p_manual = r(p)
 
-
 esttab using "$output/tabla", se replace label noobs ///
 keep(post_imported) ///
 cells(b(fmt(2) star) se(par fmt(2))) ///
 stats(p_manual blank N, fmt(2 2 0 2) labels("P-value" "Number of Observations" "R-Squared") layout([@] [@] @ @ @)) 
-
-
 
 * Regresiones por categoria
 
@@ -392,55 +387,6 @@ foreach c of local cate{
 	
 
 
-
-
-
-
-
-* Only 26 clusters: Wild Boostrap
-wildbootstrap reg price_variation_c post_imported post imported, cluster(categoria_producto) rseed(444) reps(1000)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-*eventdd price_variation_c, timevar(timeToTreat) method(fe)  graph_op(ytitle("% aumento de precio"))  wboot
-
-reg price_variation_c imported##ibn.post if post == 0, vce(cluster categoria_producto) hascons
-
-
-
-
-
-
-
-
-
-
-br if inlist(id_producto,"imp_98")
-
-
-
-
-
-
-wildbootstrap regress price_variation_c imported##i.post if post == 0, cluster(categoria_producto) rseed(12345)
-
-
-xtdidregress (price_variation_c) (post_imported), group(prod) time(time) repos
-
-
-
-reg gdppc treated##ibn.year if after == 0, vce(cluster country1) hascons
 
 
 
