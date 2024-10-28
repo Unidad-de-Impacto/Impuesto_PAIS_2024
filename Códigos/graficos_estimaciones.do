@@ -1,15 +1,4 @@
 
-* Working directory
-if  "`c(username)'" == "tomaspacheco" {
-	global main "/Users/tomaspacheco/Documents/GitHub/ImpuestoPais"
-}
-if  "`c(username)'" == "ariquelme" {
-	global main "/Users/ariquelme/Downloads"
-}
-gl input "$main/input"
-gl output "$main/output"
-gl code "$main/code"
-
 
 ***** CONSTRUCT DATA SET *****
 
