@@ -1,212 +1,15 @@
-***** CONSTRUCT DATA SET *****
-
-* Import data set with prices
-import excel "precios_productos_jumbo.xlsx", sheet("Sheet1") firstrow clear
-
-* Encode product variable and set panel data set
-encode id_producto, gen(prod)
-gen time = daily(fecha, "YMD")
-format time %td
-xtset prod time
-
-* Import characteristics of the products
-preserve
-tempfile chars
-import excel "lista_productos_caracteristicas_sinrep-2.xlsx", sheet("Sheet1") firstrow clear
-ren ID id_producto 
-split unidad_medida, p(" ")
-destring unidad_medida1, replace
-replace unidad_medida2 = "gr" if strpos(unidad_medida2, "gr")!=0
-replace unidad_medida2 = "ml" if strpos(unidad_medida2, "ml")!=0
-replace unidad_medida2 = "u" if strpos(unidad_medida2, "u")!=0
-drop link_repetido unidad_medida link
-save `chars'
-restore
-
-merge m:1 id_producto using `chars'
-drop if _m == 1
-drop _m id_producto fecha
-
-* Drop products
-drop if subcategoria == "borrar" | subcategoria == "Fiambres" | subcategoria == "Aderezos liquidos" | subcategoria == "Sopas"
-
-* 'Imported' status dummy
-gen imported = (origen != "Argentina")
-
-
-
-* Maximo de dias continuos sin stock
-* Crear una variable binaria que indica si no hay stock
-gen no_stock = (stock == "OutOfStock")
-
-* Ordenar los datos por producto y tiempo
-sort prod time
-
-* Crear una variable que identifique las rachas de días consecutivos sin stock
-gen grupo_rachas = no_stock != no_stock[_n-1] if prod == prod[_n-1]
-replace grupo_rachas = 0 if grupo_rachas == .
-
-* Asignar números a las rachas
-bysort prod (time): gen racha_id = sum(grupo_rachas)
-
-* Calcular el número de días consecutivos sin stock por racha
-bysort prod racha_id (time): gen consecutivos_sin_stock = sum(no_stock)
-
-* Mantener solo las rachas sin stock
-gen racha_sin_stock = consecutivos_sin_stock if no_stock == 1
-
-* Calcular el máximo de días consecutivos sin stock por producto
-bysort prod: egen max_consecutivos_sin_stock = max(racha_sin_stock)
-drop no_stock grupo_rachas racha_id consecutivos_sin_stock racha_sin_stock 
-
-* Generate variables for the estimation
-gen timeToTreat = time - mdy(9,2,2024)
-gen post = (time >= mdy(9,2,2024))
-gen post_imported = post*imported
-encode subcategoria, gen(categoria_producto)
-
-
-* Order and sort
-order prod origen imported subcategoria categoria_producto unidad_medida1 unidad_medida2 time post timeToTreat post_imported stock max_consecutivos_sin_stock precio  
-sort prod time
-
-
-
-***** HOMOGENIZE UNITS OF MEASUREMENT *****
-
-* ACEITE: precios por litro
-replace unidad_medida1 = 1000/unidad_medida1 if subcategoria == "Aceite"
-
-* ACEITUNAS: precios por 200grs
-replace unidad_medida1 = 200/unidad_medida1 if subcategoria == "Aceitunas"
-
-* ADEREZOS LIQUIDOS: precios por 100ml
-replace unidad_medida1 = 100/unidad_medida1 if subcategoria == "Aderezos liquidos"
-
-* ADEREZOS: precios por 500gr 
-replace unidad_medida1 = 500/unidad_medida1 if subcategoria == "Aderezos"
-
-* ARROZ: precio por kilo (1000 gr)
-replace unidad_medida1 = 1000/unidad_medida1 if subcategoria == "Arroz"
-
-* BEBIDAS VEGETALES: precio por ligro (1000 ml)
-replace unidad_medida1 = 1000/unidad_medida1 if subcategoria == "Bebidas vegetales"
-
-* BOMBONES: precio por 250 gr 
-replace unidad_medida1 = 250/unidad_medida1 if subcategoria == "Bombones"
- 
-* CAFE MOLIDO: precio por kilo 
-replace unidad_medida1 = 1000/unidad_medida1 if subcategoria == "Cafe molido"
-
-* CAPSULAS DE CAFE: precio por unidad 
-replace unidad_medida1 = 1/unidad_medida1 if subcategoria == "Capsulas de cafe"
-
-* CERVEZA: precio por litro 
-replace unidad_medida1 = 1000/unidad_medida1 if subcategoria == "Cerveza"
-
-* CHOCOLATE: precio por 100 gr 
-replace unidad_medida1 = 100/unidad_medida1 if subcategoria == "Chocolate"
-
-* CONDIMENTO: precio por 100 gr 
-replace unidad_medida1 = 100/unidad_medida1 if subcategoria == "Condimento"
-
-* CONDIMENTO LIQUIDO: precio por 250 ml 
-replace unidad_medida1 = 250/unidad_medida1 if subcategoria == "Condimento liquido"
-
-* ENLATADOS: precio por 500 gr  
-replace unidad_medida1 = 500/unidad_medida1 if subcategoria == "Enlatados"
-
-* FIAMBRES: precio por 100 gr 
-replace unidad_medida1 = 100/unidad_medida1 if subcategoria == "Fiambres"
-
-* GALLETITAS: precio por 100 gr 
-replace unidad_medida1 = 100/unidad_medida1 if subcategoria == "Galletitas"
-
-* GOLOSINAS: precio por 100 gr 
-replace unidad_medida1 = 100/unidad_medida1 if subcategoria == "Golosinas"
-
-* MERMELADA: precio por 500 gr 
-replace unidad_medida1 = 500/unidad_medida1 if subcategoria == "Mermelada"
-
-* PASTAS LARGAS: precio por 500 gr 
-replace unidad_medida1 = 500/unidad_medida1 if subcategoria == "Pastas largas"
-
-* PASTAS CORTAS: precio por 500 gr 
-replace unidad_medida1 = 500/unidad_medida1 if subcategoria == "Pastas cortas"
-
-* PESCADO ENLATADO: precio por 100 gr 
-replace unidad_medida1 = 100/unidad_medida1 if subcategoria == "Pescado enlatado"
-
-* QUESO: precio por kilo 
-replace unidad_medida1 = 1000/unidad_medida1 if subcategoria == "Queso"
-
-* RISOTTO: precio por 250 gr 
-replace unidad_medida1 = 250/unidad_medida1 if subcategoria == "Risotto"
-
-* SALSA DE TOMATE: precio por 500 gr 
-replace unidad_medida1 = 500/unidad_medida1 if subcategoria == "Salsa de tomate"
-
-* SALSA PREPARADA: precio por 500 gr 
-replace unidad_medida1 = 500/unidad_medida1 if subcategoria == "Salsa preparada"
-
-* SNACK: precio por 100 gr 
-replace unidad_medida1 = 100/unidad_medida1 if subcategoria == "Snack"
-
-* SOPAS: precio por 100 gr 
-replace unidad_medida1 = 100/unidad_medida1 if subcategoria == "Sopas"
-
-* TE: precio por unidad (saquito)
-replace unidad_medida1 = 1/unidad_medida1 if subcategoria == "Te"
-
-* YERBA: precio por kilo 
-replace unidad_medida1 = 1000/unidad_medida1 if subcategoria == "Yerba"
-
-***** GENERATING PRICE VARIABLES *****
-
-* As products might not be in stock we compute the 'continuos' price variable
-* We assume prices do not change if they are not in stock
-by prod (time): carryforward precio, gen(precio_cont)
-
-* Generate price standardized by the unit of measurement
-gen precio_std = precio_cont*unidad_medida1
-
-* Generate price variation compared to previous day
-bys prod: gen price_var = D.precio/L.precio * 100
-bys prod: gen price_var_cont = D.precio_cont/L.precio_cont * 100
-
-* Generate a variable with the first price of the product
-bysort prod: gen first_price_cont = precio_cont[1]
-
-* Accumulated inflation 
-gen price_variation_c = (precio_cont - first_price_cont) / first_price_cont * 100
-
-* Merge exchange rage
-
-preserve
-tempfile dolar
-import excel "/Users/ariquelme/Downloads/dolar_oficial.xlsx", sheet("Hoja 1") firstrow clear
-ren Fecha time
-tsset time 
-tsfill
-carryforward Compra, gen(compra)
-carryforward Venta, gen(venta)
-
-* Generate a variable with the first price of the product
-sort time
-gen first_dolar = 970
-
-* Accumulated ER change
-gen dolar_variation = (venta - first_dolar) / first_dolar * 100
-keep time dolar_variation
-save `dolar'
-restore
-merge m:1 time using `dolar'
-
-compress
-
-
-
 ***** PLOTS *****
+
+* Working directory
+
+if  "`c(username)'" == "ariquelme" {
+	global main "/Users/ariquelme/Downloads"
+}
+gl input "$main/input"
+gl output "$main/output"
+gl code "$main/code"
+
+use base_productos.dta
 
 unique prod
 drop if max_consecutivos_sin_stock > 4 & max_consecutivos_sin_stock !=.
@@ -222,11 +25,6 @@ gl amarillo "230 184 97"
 
 preserve
 
-collapse (mean) price_variation_c precio_cont dolar_variation, by(imported time)
-
-twoway (line precio_cont time if imported == 0, lcolor("$azul_claro")) (line precio_cont time if imported == 1, lcolor("$amarillo")), legend(order(1 "Nacional" 2 "Importado") ring(1) pos(6) cols(2)) tline(2sep2024, lcolor("$azul_oscuro")) ytitle("Precio promedio en pesos") xtitle("") title("Evolución ") tlabel(02sep2024(10)08oct2024 , labsize(small) ) text(10000 23622  "Baja Impuesto País", place(e) box bcolor(gs15)) 
-graph export "$output/graficos/nivel_total.png", as(png) name("Graph") replace
-
 keep if time <= mdy(09,30,2024)
 
 twoway (line price_variation_c time if imported == 0, lcolor("$azul_claro")) (line price_variation_c time if imported == 1, lcolor("$amarillo")) (line dolar_variation time if imported == 1, lcolor("$azul_oscuro")), ///
@@ -237,24 +35,8 @@ tlabel(02sep2024(10)02oct2024, labsize(small)) text(-0.12 23648 "-0.11%", place(
 graphregion(fcolor(white) lcolor(white)) plotregion(fcolor(white) lcolor(white)) ///
 yscale(range(0 4))
 
-
-
-graph export "$output/graficos/var_total.png", as(png) name("Graph")  replace
-
-
-* Precio normalizado al día del tratamiento
-gen precio = precio_cont/4309.4352 if imported == 0
-replace precio = precio_cont/9663.2381 if imported == 1
-twoway (line precio time if imported == 0, lcolor("$azul_claro")) (line precio time if imported == 1, lcolor("$amarillo")), legend(order(1 "Nacional" 2 "Importado") ring(1) pos(6) cols(2)) tline(2sep2024, lcolor("$azul_oscuro")) ytitle("Precio 2sep24 = 1") xtitle("") title("Evolución ") tlabel(02sep2024(10)08oct2024 , labsize(small) )
-
-* Precios normalizados al comienzo de la serie
-gen precio2 = precio_cont/4309.4352 if imported == 0
-replace precio2 = precio_cont/9713.2381 if imported == 1
-twoway (line precio2 time if imported == 0, lcolor("$azul_claro")) (line precio2 time if imported == 1, lcolor("$amarillo")), legend(order(1 "Nacional" 2 "Importado") ring(1) pos(6) cols(2)) tline(2sep2024, lcolor("$azul_oscuro")) ytitle("Precio 29ago24 = 1") xtitle("") title("Evolución ") tlabel(02sep2024(10)08oct2024 , labsize(small) )
-
 restore
 
-keep if time <= mdy(09,30,2024)
 
 preserve
 collapse (mean) price_variation_c precio_cont, by(subcate imported time)
@@ -287,9 +69,6 @@ graph export "$output/graficos/nivel_`c'.png", as(png) name("Graph") replace
 
 putpdf begin
 putpdf paragraph, halign(center)
-putpdf image "$output/graficos/nivel_total.png", linebreak width(6)
-putpdf paragraph, halign(center)
-putpdf image "$output/graficos/var_total.png", linebreak width(6)
 	
 levelsof subcategoria, l(cate)
 foreach c of local cate{
@@ -358,7 +137,9 @@ eststo clear
 eststo: reg price_variation_c post_imported post imported, cluster(categoria_producto)
 
 * Only 26 clusters: Wild Boostrap
-wildbootstrap reg price_variation_c post_imported post imported, cluster(categoria_producto) rseed(444) reps(1000)
+reg price_variation_c post_imported post imported, robust 
+boottest {post_imported} ,  boottype(wild) cluster(categoria_producto) seed(444) reps(1000) nogr 
+
 eststo: test post_imported == 0
 estadd scalar p_manual = r(p)
 
@@ -370,10 +151,12 @@ wildbootstrap reg precio_cont post_imported post imported, cluster(categoria_pro
 eststo: test post_imported == 0
 estadd scalar p_manual = r(p)
 
+
 esttab using "$output/tabla", se replace label noobs ///
 keep(post_imported) ///
 cells(b(fmt(2) star) se(par fmt(2))) ///
 stats(p_manual blank N, fmt(2 2 0 2) labels("P-value" "Number of Observations" "R-Squared") layout([@] [@] @ @ @)) 
+
 
 * Regresiones por categoria
 
@@ -385,10 +168,5 @@ foreach c of local cate{
 	outreg2 using "$output/categorias.xls", append keep(post_imported) ctitle("`c'") eqdrop(cons)
 }
 	
-
-
-
-
-
 
 
