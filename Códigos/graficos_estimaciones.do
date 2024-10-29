@@ -25,6 +25,8 @@ gl amarillo "230 184 97"
 
 preserve
 
+collapse (mean) price_variation_c precio_cont dolar_variation, by(imported time)
+
 keep if time <= mdy(09,30,2024)
 
 twoway (line price_variation_c time if imported == 0, lcolor("$azul_claro")) (line price_variation_c time if imported == 1, lcolor("$amarillo")) (line dolar_variation time if imported == 1, lcolor("$azul_oscuro")), ///
@@ -34,6 +36,9 @@ text(3 23621 "Baja Impuesto País", place(e) box bcolor(gs15) size(small)) ///
 tlabel(02sep2024(10)02oct2024, labsize(small)) text(-0.12 23648 "-0.11%", place(e) box bcolor(gs15) size(small)) text(-0.35 23648 "(-2.3% real)", place(e) box bcolor(gs15) size(small)) text(3.2 23648 "+3.2%", place(e) box bcolor(gs15) size(small)) text(2.1 23648 "+2.1%", place(e) box bcolor(gs15) size(small)) ///
 graphregion(fcolor(white) lcolor(white)) plotregion(fcolor(white) lcolor(white)) ///
 yscale(range(0 4))
+
+# En el gráfico anterior se reporta la variación real para los productos importados, se considera la inflación registrada por INDEC para la categoría "Alimentos y Bebidas no Alcohólicas" (2024-09)
+# No es posible realizar el gráfico en términos reales debido a que no se dispone de datos de inflación diarios. 
 
 restore
 
