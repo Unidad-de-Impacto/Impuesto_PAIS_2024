@@ -2,9 +2,6 @@
 
 * Working directory
 
-if  "`c(username)'" == "ariquelme" {
-	global main "/Users/ariquelme/Downloads"
-}
 gl input "$main/input"
 gl output "$main/output"
 gl code "$main/code"
